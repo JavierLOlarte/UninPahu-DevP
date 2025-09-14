@@ -11,8 +11,10 @@
     <description>Aplicación educativa vulnerable - Ethical Hacking</description>
 
     <properties>
-        <java.version>21</java.version>
+        <java.version>17</java.version>
         <spring-boot.version>3.2.5</spring-boot.version>
+        <maven.compiler.source>17</maven.compiler.source>
+        <maven.compiler.target>17</maven.compiler.target>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
     </properties>
 
@@ -55,7 +57,7 @@
             <optional>true</optional>
         </dependency>
 
-        <!-- DevTools (opcional en desarrollo, no en producción) -->
+        <!-- DevTools (solo desarrollo) -->
         <dependency>
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-devtools</artifactId>
@@ -76,6 +78,7 @@
             <plugin>
                 <groupId>org.springframework.boot</groupId>
                 <artifactId>spring-boot-maven-plugin</artifactId>
+                <version>${spring-boot.version}</version>
             </plugin>
         </plugins>
     </build>
