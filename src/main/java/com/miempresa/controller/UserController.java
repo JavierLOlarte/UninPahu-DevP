@@ -131,8 +131,7 @@ public class UserController {
     }
 
 
-    // Simple inner class para recibir login payload (mantener simple y vulnerable)
-    // Si no usas Lombok, crea getters/setters o usa campos públicos.
+    // Simple inner class para recibir login payload
     @Data
     public static class LoginRequest {
         private String email;
