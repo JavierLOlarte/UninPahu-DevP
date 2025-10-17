@@ -86,6 +86,7 @@
 <script setup>
 import { ref, computed } from 'vue'
 import axios from 'axios'
+import { useRouter } from 'vue-router'
 
 // estado
 const email = ref('')
@@ -99,6 +100,8 @@ const user = ref(null)
 const token = ref(null)
 const emailTouched = ref(false)
 const passwordTouched = ref(false)
+
+const router = useRouter()
 
 // validaciones simples
 const validEmail = computed(() => {
@@ -121,22 +124,50 @@ const onSubmit = async () => {
 
   loading.value = true
   try {
-    // Ajusta la URL si tu backend está en otro path
-    const resp = await axios.post('http://localhost:8080/api/users/login', {
+    // => URL correcto del backend que ya tienes
+    const resp = await axios.post('http://localhost:8080/api/auth/login', {
       email: email.value,
       password: password.value
-    })
+    }, { headers: { 'Content-Type': 'application/json' } })
 
-    // El backend vulnerable devuelve un objeto usuario en caso de éxito
-    user.value = resp.data
-    token.value = 'insecure-token-' + Math.random().toString(36).slice(2)
+    // Esperamos { token: "...", userId: 1, email: "..." } como devolvías en el backend
+    const data = resp.data
 
-    // Guardado inseguro demo
-    if (remember.value) localStorage.setItem('vulnapp_token', token.value)
-    else localStorage.removeItem('vulnapp_token')
+    // Construimos un objeto user mínimo para mostrar en UI
+    user.value = {
+      id: data.userId ?? null,
+      email: data.email ?? email.value
+    }
 
-    message.value = 'Login exitoso (demo).'
+    // Guardamos el token real devuelto por el backend
+    token.value = data.token
+    if (token.value) {
+      // opción: configurar axios por defecto para futuras peticiones
+      axios.defaults.headers.common['Authorization'] = 'Bearer ' + token.value
+
+      // guardado inseguro intencional para el laboratorio
+      localStorage.setItem('vulnapp_token', token.value)
+      localStorage.setItem('vulnapp_user', JSON.stringify(user.value))
+
+      // Si el checkbox 'remember' está activo, lo dejamos persistente en storage (ya lo hacemos)
+      // Si no, se queda igual (puedes decidir borrar al cerrar la pestaña si quieres)
+      if (!remember.value) {
+        // opcional: no hacer nada — ya guardamos token, esto es intencionalmente inseguro
+      }
+    }
+
+    message.value = 'Login exitoso.'
     success.value = true
+
+    // pequeña pausa para UX, luego redirigir a /accounts
+// pequeña pausa para UX, luego redirigir
+setTimeout(() => {
+  // si hay query.redirect (intentaste entrar a ruta protegida), ir ahí; si no, a /accounts
+  const redirectPath = router.currentRoute.value.query.redirect || '/accounts'
+  router.push(redirectPath)
+}, 400)
+
+
   } catch (err) {
     success.value = false
     if (err.response?.status === 401) message.value = 'Credenciales inválidas.'
@@ -151,16 +182,24 @@ const clearSession = () => {
   user.value = null
   token.value = null
   message.value = ''
+
+  // Eliminar token y usuario guardados
   localStorage.removeItem('vulnapp_token')
+  localStorage.removeItem('vulnapp_user')
+
+  // Limpiar cabecera
+  delete axios.defaults.headers.common['Authorization']
+
+  // Redirigir a /login
+  router.push('/login')
 }
-import { useRouter } from 'vue-router'
-const router = useRouter()
+
 
 const goRegister = () => {
   router.push('/register')
 }
-
 </script>
+
 
 <style scoped>
 /* Layout */

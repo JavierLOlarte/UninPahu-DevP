@@ -1,10 +1,7 @@
 package com.miempresa.entity;
 
 import jakarta.persistence.*;
-import lombok.AllArgsConstructor;
-import lombok.Builder;
-import lombok.Data;
-import lombok.NoArgsConstructor;
+import lombok.*;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
@@ -45,6 +42,7 @@ public class AccountEntity {
     // INTENCIONAL: relación ManyToOne sin comprobaciones; FetchType.EAGER para exponer usuario junto con la cuenta.
     @ManyToOne(fetch = FetchType.EAGER)
     @JoinColumn(name = "usuario_id")
+    @ToString.Exclude
     // INTENCIONAL: no se realiza verificación de ownership en endpoints — objetivo educativo para demostrar falla de control de acceso.
     private UserEntity usuario;
 
