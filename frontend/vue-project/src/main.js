@@ -53,5 +53,5 @@ if (hasValidToken(savedToken)) {
 }
 */
 
-// montaje normal (si no usas la validación opcional)
+
 createApp(App).use(router).mount('#app')

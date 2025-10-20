@@ -5,6 +5,9 @@
       <h1>💼 Mis cuentas</h1>
       <div class="actions">
         <button class="btn-primary" @click="goCreate">+ Crear cuenta</button>
+<button class="btn-secondary" @click="logout">
+  🔒 Cerrar sesión
+</button>
       </div>
     </header>
 
@@ -129,7 +132,12 @@ const loadSession = () => {
     user.value = null
   }
 }
-
+const logout = () => {
+  localStorage.removeItem('vulnapp_token')
+  localStorage.removeItem('vulnapp_user')
+  delete axios.defaults.headers.common['Authorization']
+  router.push('/login')
+}
 
 // Obtener cuentas. Si hay user.id, pasar ownerId para listar solo su cuentas (pero backend en fase vulnerable puede ignorar)
 const fetchAccounts = async () => {
