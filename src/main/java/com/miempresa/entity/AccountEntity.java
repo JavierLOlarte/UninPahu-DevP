@@ -51,4 +51,10 @@ public class AccountEntity {
     // INTENCIONAL: createdAt se rellena desde la aplicación (no desde DB) para demostrar manipulación temporal si se permite.
     private LocalDateTime createdAt;
 
+    @PrePersist
+    public void prePersist() {
+        if (createdAt == null) {
+            createdAt = LocalDateTime.now();
+        }
+    }
 }
