@@ -1,6 +1,6 @@
 spring:
   datasource:
-    url: jdbc:postgresql://localhost:5433/vulnappdb
+    url: jdbc:postgresql://postgres:5432/vulnappdb
     username: vulnuser
     password: vulnpass
     driver-class-name: org.postgresql.Driver
@@ -10,5 +10,7 @@ spring:
     show-sql: true
     properties:
       hibernate.format_sql: true
-server:
-  port: 8080
+      hibernate.default_schema: uninpahu
+  sql:
+    init:
+      mode: always

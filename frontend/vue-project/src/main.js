@@ -18,40 +18,21 @@ if (hasValidToken(savedToken)) {
   delete axios.defaults.headers.common['Authorization']
 }
 
-// ✅ Interceptor
 axios.interceptors.response.use(
   res => res,
   err => {
     if (err.response?.status === 401) {
+      // Solo limpiar el localStorage, NO recargar la página
       localStorage.removeItem('vulnapp_token')
       localStorage.removeItem('vulnapp_user')
       delete axios.defaults.headers.common['Authorization']
-      window.location.href = '/login'
+
+      // En lugar de recargar, puedes redirigir usando el router si es necesario
+      // pero para el login, dejamos que el componente maneje el error
+      console.log('🔐 Sesión expirada o credenciales inválidas')
     }
     return Promise.reject(err)
   }
 )
-
-// Opcional: validar token con backend al inicio (async)
-// Si lo activas, haz que la app espere a la respuesta antes de montar.
-// Ejemplo rápido (no obligatorio):
-/*
-if (hasValidToken(savedToken)) {
-  axios.get('http://localhost:8080/api/auth/validate')
-    .then(() => {
-      createApp(App).use(router).mount('#app')
-    })
-    .catch(() => {
-      // token inválido: limpiar y montar app (redirección al login por guard)
-      localStorage.removeItem('vulnapp_token')
-      localStorage.removeItem('vulnapp_user')
-      delete axios.defaults.headers.common['Authorization']
-      createApp(App).use(router).mount('#app')
-    })
-} else {
-  createApp(App).use(router).mount('#app')
-}
-*/
-
 
 createApp(App).use(router).mount('#app')
