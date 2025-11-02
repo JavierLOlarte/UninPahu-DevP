@@ -47,7 +47,7 @@ public class UserEntity {
 
     // INTENCIONAL: relación EAGER para exponer cuentas asociadas y mostrar problemas de sobreexposición de datos.
     // Mapea a la entidad AccountEntity (implementar después). FetchType.EAGER para que se serialice junto al user.
-    @OneToMany(mappedBy = "usuario", fetch = FetchType.EAGER, cascade = CascadeType.ALL)
+    @OneToMany(mappedBy = "usuario", fetch = FetchType.EAGER, cascade = CascadeType.ALL, orphanRemoval = true)
     @JsonIgnore
     @ToString.Exclude
     private List<AccountEntity> accounts;

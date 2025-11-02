@@ -2,6 +2,8 @@ package com.miempresa.service.Impl;
 
 import com.miempresa.entity.AccountEntity;
 import com.miempresa.repository.AccountRepositoryVuln;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.transaction.annotation.Transactional;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
@@ -9,8 +11,11 @@ import java.math.BigDecimal;
 import java.util.List;
 import java.util.Optional;
 
+
 @Service
+@Slf4j
 @RequiredArgsConstructor
+@Transactional
 public class AccountServiceVuln {
 
     private final AccountRepositoryVuln accountRepository;
@@ -34,9 +39,20 @@ public class AccountServiceVuln {
     }
 
     // Eliminar cuenta sin validar propietario
+
+    @Transactional
     public void delete(Long id) {
-        accountRepository.deleteById(id);
+        if (!accountRepository.existsById(id)) {
+            throw new IllegalArgumentException("Account not found: " + id);
+        }
+        AccountEntity acc = accountRepository.findById(id).orElse(null);
+        log.info("FOUND BEFORE DELETE: {}", acc);
+
+        accountRepository.deleteNative(id);
+
+        log.info("Deleted (native)");
     }
+
 
     // Actualizar monto (sin validaciones ni seguridad)
     public AccountEntity updateBalance(Long id, BigDecimal newBalance) {

@@ -9,7 +9,7 @@ spring:
       ddl-auto: update
     show-sql: true
     properties:
-      hibernate.format_sql: true
+      hibernate.format_sql: false
       hibernate.default_schema: uninpahu
   sql:
     init:

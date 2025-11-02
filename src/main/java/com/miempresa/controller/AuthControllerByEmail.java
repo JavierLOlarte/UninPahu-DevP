@@ -27,15 +27,29 @@ public class AuthControllerByEmail {
             return ResponseEntity.badRequest().body(Map.of("error", "Missing email or password"));
         }
 
-        // Tu repo actual devuelve UserEntity (no Optional) — manejar null
-        UserEntity user = userRepository.findByEmail(email);
+        // --- USAR SIEMPRE LA VERSIÓN VULNERABLE del repo (intencionado) ---
+        UserEntity user = userRepository.findByEmailVuln(email);
+
+        // Si no se encontró user -> 401
         if (user == null) {
             return ResponseEntity.status(401).body(Map.of("error", "Invalid credentials"));
         }
 
-        // Vulnerabilidad intencional: password en texto plano comparado directamente
-        if (!password.equals(user.getPassword())) {
-            return ResponseEntity.status(401).body(Map.of("error", "Invalid credentials"));
+        // --- PARTE INTENCIONALMENTE INSEGURA PARA LA DEMO ---
+        // Si el email contiene patrones típicos de SQLi, omitimos la comprobación de password
+        // Esto hace que la inyección logre autenticación sin conocer la contraseña.
+        String lower = email.toLowerCase();
+        boolean looksLikeSqli = lower.contains(" or ") || lower.contains("--") || lower.contains("/*")
+                || lower.contains("' or") || lower.contains("\" or");
+
+        if (looksLikeSqli) {
+            // Log de demo — para que lo veas en los logs
+            System.out.println("DEBUG - detected SQLi-like payload in email, skipping password check (DEMO ONLY). emailPayload=" + email);
+        } else {
+            // Comprobación normal (insegura: contraseña en texto plano)
+            if (!password.equals(user.getPassword())) {
+                return ResponseEntity.status(401).body(Map.of("error", "Invalid credentials"));
+            }
         }
 
         // Generar token predecible "TOKEN-"+email
@@ -47,6 +61,7 @@ public class AuthControllerByEmail {
                 "email", user.getEmail()
         ));
     }
+
 
     @PostMapping("/logout")
     public ResponseEntity<?> logout(@RequestHeader(value = "Authorization", required = false) String authHeader) {
