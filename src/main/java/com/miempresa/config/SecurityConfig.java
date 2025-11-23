@@ -38,10 +38,20 @@ public class SecurityConfig {
                     return cfg;
                 }))
 
-                // Autorizaciones
+// Autorizaciones
                 .authorizeHttpRequests(auth -> auth
+                        // 1. Permitir la ruta de Autenticación (login, etc.)
                         .requestMatchers("/api/auth/**").permitAll()
-                        .requestMatchers("/api/accounts/**").authenticated() // protegemos cuentas
+
+                        // 2. EXCEPCIÓN: Permitir el POST para crear cuentas
+                        // Esto permite solicitudes POST a /api/accounts sin autenticación.
+                        .requestMatchers(org.springframework.http.HttpMethod.POST, "/api/accounts").permitAll()
+
+                        // 3. Proteger TODAS las otras solicitudes a /api/accounts/**
+                        // Esto protege GET, PUT, DELETE, y cualquier otra cosa que no sea el POST de creación.
+                        .requestMatchers("/api/accounts/**").authenticated()
+
+                        // 4. Permitir cualquier otra solicitud que no caiga en las reglas anteriores
                         .anyRequest().permitAll()
                 )
 

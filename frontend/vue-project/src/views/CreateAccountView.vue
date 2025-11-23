@@ -1,5 +1,63 @@
 <template>
   <div class="page-minimal-create">
+
+    <div class="assistant-container">
+      <div
+        class="assistant-icon"
+        @click="toggleAssistantList"
+        :class="{ 'active': showVulnerabilityList }">
+        <svg xmlns="http://www.w3.org/2000/svg" width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="animate-float">
+            <path d="M12 2L2 7l10 5 10-5-10-5z"/>
+            <path d="M2 17l10 5 10-5M2 12l10 5 10-5"/>
+        </svg>
+      </div>
+
+      <div class="assistant-bubble" :class="{ 'expanded': showVulnerabilityList }">
+        <div v-if="!showVulnerabilityList" class="initial-message">
+            ¡Estás en la ruta de creación! **Haz clic** para ver dos fallos de seguridad críticos en esta pantalla.
+        </div>
+
+        <div v-if="showVulnerabilityList" class="vulnerability-list-inner">
+            <h3 class="list-title">⚠️ Fallos Críticos en el Endpoint POST /api/accounts</h3>
+
+            <div class="vulnerability-item" @click.stop="vulnerabilidades[0].isOpen = !vulnerabilidades[0].isOpen">
+                <div class="vulnerability-header">
+                    <span class="vulnerability-name">1. FALTA DE AUTH: Creación sin Token</span>
+                    <span class="vulnerability-icon">{{ vulnerabilidades[0].isOpen ? '▲' : '▼' }}</span>
+                </div>
+                <div v-if="vulnerabilidades[0].isOpen" class="vulnerability-details">
+                    <p class="simple-description">
+                        El **Front-end** controla tu sesión (si te deslogueas, necesitas iniciar sesión), pero el **Back-end** tiene una vulnerabilidad.
+                        <br/><br/>
+                        **Prueba (PoC):** Utiliza Postman y envía la petición **POST** a la URL de creación (sin incluir el Token en los headers).
+                        <br/>
+                        **URL:** <code class="code-block-inline">http://localhost:8080/api/accounts</code>
+                        <br/>
+                        **Resultado:** Podrás crear cuentas aunque no estés autenticado, ya que el endpoint fue configurado como **.permitAll()**.
+                    </p>
+                </div>
+            </div>
+
+            <div class="vulnerability-item" @click.stop="vulnerabilidades[1].isOpen = !vulnerabilidades[1].isOpen">
+                <div class="vulnerability-header">
+                    <span class="vulnerability-name">2. ASIGNACIÓN MASIVA: Fijar Dueño (IDOR)</span>
+                    <span class="vulnerability-icon">{{ vulnerabilidades[1].isOpen ? '▲' : '▼' }}</span>
+                </div>
+                <div v-if="vulnerabilidades[1].isOpen" class="vulnerability-details">
+                    <p class="simple-description">
+                        El formulario permite fijar el **Owner ID** (`{{ ownerId }}` por defecto). El *Back-end* acepta este campo, lo que permite a un atacante asignar la cuenta a cualquier usuario.
+                        <br/>
+                        **Body de Ataque (Postman):**
+                    </p>
+                    <pre class="code-block json-pre">{{ bodyAtaque }}</pre>
+                    <p class="simple-description">
+                        Al enviar esto **sin autenticación** y con un ID de usuario fijo (`"id": 3`), demuestras que el servidor es vulnerable a **Asignación Masiva** (Mass Assignment), permitiendo la inyección de la propiedad `usuario`.
+                    </p>
+                </div>
+            </div>
+        </div>
+      </div>
+    </div>
     <div class="card-create">
       <header class="head-create">
         <button class="btn-back" @click="goBack" aria-label="Volver a mis cuentas">
@@ -15,20 +73,17 @@
 
       <form @submit.prevent="onCreate" class="form-create">
 
-        <!-- Campo Owner ID (Educativo/Vulnerable) -->
         <div class="field-group">
           <label for="ownerId" class="label-create">ID del Propietario (Owner ID)</label>
           <input id="ownerId" v-model="ownerId" placeholder="Ej. 1 (Usuario en sesión por defecto)" class="input-create" />
           <small class="hint-create">Asignado por defecto al usuario en sesión para simular un proceso real. Cambiarlo permite la prueba de IDOR.</small>
         </div>
 
-        <!-- Número de cuenta -->
         <div class="field-group">
           <label for="numeroCuenta" class="label-create">Número de Cuenta</label>
           <input id="numeroCuenta" v-model="numeroCuenta" placeholder="0001234567" class="input-create" required/>
         </div>
 
-        <!-- Tipo de cuenta -->
         <div class="field-group">
           <label for="tipo" class="label-create">Tipo de Cuenta</label>
           <select id="tipo" v-model="tipo" class="input-create select-create" required>
@@ -38,7 +93,6 @@
           </select>
         </div>
 
-        <!-- Saldo inicial -->
         <div class="field-group">
           <label for="monto" class="label-create">Saldo Inicial (COP)</label>
           <input id="monto" v-model.number="monto" type="number" step="0.01" placeholder="Ej: 1000.00" class="input-create" required/>
@@ -52,7 +106,6 @@
           <button type="button" class="btn-secondary-create" @click="goBack">Cancelar</button>
         </div>
 
-        <!-- Mensaje de estado -->
         <div v-if="msg" :class="['message-status', ok ? 'ok-status' : 'fail-status']">
           {{ msg }}
         </div>
@@ -62,7 +115,7 @@
 </template>
 
 <script setup>
-import { ref, onMounted } from 'vue'
+import { ref, onMounted, computed } from 'vue'
 import axios from 'axios'
 import { useRouter } from 'vue-router'
 
@@ -74,6 +127,33 @@ const ownerId = ref('')
 const loading = ref(false)
 const msg = ref('')
 const ok = ref(false)
+
+// --- LÓGICA DEL ASISTENTE ---
+const showVulnerabilityList = ref(false)
+const vulnerabilidades = ref([
+    { id: 1, nombre: "Falta de Autenticación", isOpen: false },
+    { id: 2, nombre: "Asignación Masiva", isOpen: false },
+])
+
+const toggleAssistantList = () => {
+  showVulnerabilityList.value = !showVulnerabilityList.value
+}
+
+// Cuerpo JSON para el PoC de Asignación Masiva/IDOR (Mantiene el formato de Postman)
+const bodyAtaque = computed(() => {
+    return JSON.stringify({
+      "numeroCuenta": "1234567891210",
+      "tipo": "AHORROS",
+      "monto": 1000.50,
+      "metadata": "Ataque de Asignacion Masiva/NoAuth",
+      "usuario": {
+        "id": 3
+      },
+      "createdAt": "2025-11-23T15:00:00"
+    }, null, 2);
+});
+// --- FIN LÓGICA DEL ASISTENTE ---
+
 
 const loadSessionUser = () => {
   try {
@@ -111,10 +191,11 @@ const onCreate = async () => {
     }
 
     if (ownerId.value) {
-      // Convertir a número para que el backend de Spring Boot lo mapee correctamente
+      // VULNERABILIDAD: Se permite asignar el usuario ID directamente desde el cliente.
       payload.usuario = { id: Number(ownerId.value) }
     }
 
+    // Aquí no se envía el token ya que esta ruta es .permitAll() en el backend.
     const res = await axios.post('http://localhost:8080/api/accounts', payload)
 
     ok.value = true
@@ -132,8 +213,8 @@ const onCreate = async () => {
 }
 </script>
 
-<style>
-/* --- PALETA Y BASE (Light Mode Profesional) --- */
+<style scoped>
+/* --- ESTILOS ASISTENTE (Añadidos para el diseño Dark/Accent) --- */
 :root {
     --primary-blue: #007AFF;
     --primary-dark: #004d99;
@@ -145,8 +226,176 @@ const onCreate = async () => {
     --success-text: #059669;
     --error-bg: #fef2f2;
     --error-text: #ef4444;
+
+    /* PALETA ASISTENTE (Dark Mode Sobrio, replicada del componente principal) */
+    --color-primary: #3b82f6;
+    --color-primary-dark: #2563eb;
+    --color-accent: #fcd34d;
+    --color-background-dark: #0f172a;
+    --color-card-bg-dark: #1e293b;
+    --color-text-light-dark: #f1f5f9;
+    --color-text-subtle-dark: #94a3b8;
+    --color-border-dark: #334155;
 }
 
+@keyframes float {
+    0% { transform: translateY(0px); }
+    50% { transform: translateY(-10px); }
+    100% { transform: translateY(0px); }
+}
+
+.assistant-container {
+    position: fixed;
+    top: 50px;
+    right: 50px;
+    display: flex;
+    flex-direction: column-reverse;
+    align-items: flex-end;
+    max-width: 450px;
+    z-index: 1000;
+}
+
+.assistant-bubble {
+    background-color: var(--color-card-bg-dark);
+    border: 1px solid var(--color-primary);
+    color: var(--color-text-light-dark);
+    padding: 15px;
+    border-radius: 12px 0 12px 12px;
+    margin-bottom: 5px;
+    position: relative;
+    font-size: 0.9rem;
+    text-align: left;
+    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.4);
+    min-width: 280px;
+    transition: all 0.3s ease;
+    order: 1;
+}
+
+.assistant-bubble.expanded {
+    min-width: 350px;
+    padding: 20px;
+    border-color: var(--color-accent);
+}
+
+/* Flecha del Asistente apuntando al icono */
+.assistant-bubble::after {
+    content: '';
+    position: absolute;
+    bottom: 100%;
+    top: auto;
+    right: 10px;
+    width: 0;
+    height: 0;
+    border-left: 10px solid transparent;
+    border-right: 10px solid transparent;
+    border-top: none;
+    border-bottom: 10px solid var(--color-primary);
+    transition: all 0.3s ease;
+}
+.assistant-bubble.expanded::after {
+    border-bottom: 10px solid var(--color-accent);
+}
+
+
+.assistant-icon {
+    order: 2;
+    color: var(--color-primary);
+    cursor: pointer;
+    animation: float 3s ease-in-out infinite;
+    transition: all 0.3s ease;
+}
+
+.assistant-icon:hover {
+    color: var(--color-accent);
+}
+
+.assistant-icon.active {
+    animation: none;
+    color: var(--color-accent);
+    transform: scale(1.1);
+}
+
+/* --- LISTA DENTRO DEL GLOBO --- */
+.vulnerability-list-inner {
+    max-height: 400px;
+    overflow-y: auto;
+    padding-right: 5px;
+}
+
+.list-title {
+    font-size: 1rem;
+    color: var(--color-accent);
+    margin-bottom: 10px;
+    padding-bottom: 5px;
+    border-bottom: 1px dashed var(--color-border-dark);
+}
+
+.vulnerability-item {
+    cursor: pointer;
+    padding: 8px 0;
+    border-bottom: 1px dotted var(--color-border-dark);
+    transition: background-color 0.2s;
+}
+
+.vulnerability-item:last-child {
+    border-bottom: none;
+}
+.vulnerability-item:hover {
+    background-color: rgba(59, 130, 246, 0.1);
+    border-radius: 4px;
+    padding: 8px;
+    margin: 0 -8px;
+}
+
+.vulnerability-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    font-weight: 600;
+}
+
+.vulnerability-name {
+    color: var(--color-text-light-dark);
+}
+
+.vulnerability-icon {
+    font-size: 0.8rem;
+    color: var(--color-text-subtle-dark);
+}
+
+.vulnerability-details {
+    padding: 10px 0 5px 0;
+    font-size: 0.85rem;
+    color: var(--color-text-subtle-dark);
+}
+
+.simple-description {
+    margin-bottom: 10px;
+}
+
+.code-block-inline {
+    background-color: #374151;
+    color: #fcd34d;
+    padding: 3px 6px;
+    border-radius: 4px;
+    font-family: monospace;
+    font-size: 0.85rem;
+    word-break: break-all;
+}
+
+.json-pre {
+    background-color: #111827;
+    color: #e5e7eb;
+    padding: 10px;
+    border-radius: 6px;
+    margin: 10px 0;
+    white-space: pre-wrap;
+    font-size: 0.8rem;
+    border: 1px solid #4b5563;
+}
+
+
+/* --- RESTO DE LOS ESTILOS ORIGINALES DEL USUARIO --- */
 .page-minimal-create {
     background-color: var(--bg-light);
     min-height: 100vh;
@@ -352,6 +601,30 @@ const onCreate = async () => {
     }
     .card-create {
         padding: 20px;
+    }
+}
+
+/* ESTILO PARA AJUSTAR LA POSICIÓN DEL ASISTENTE EN PANTALLAS PEQUEÑAS */
+@media (max-width: 900px) {
+    .assistant-container {
+        top: auto;
+        bottom: 20px;
+        right: 20px;
+    }
+    .assistant-bubble {
+        border-radius: 12px 12px 0 12px;
+        margin-bottom: 5px;
+    }
+    .assistant-bubble::after {
+        top: auto;
+        bottom: -10px;
+        right: 10px;
+        border-top: 10px solid var(--color-primary);
+        border-bottom: none;
+    }
+    .assistant-bubble.expanded::after {
+        border-top: 10px solid var(--color-accent);
+        border-bottom: none;
     }
 }
 </style>
