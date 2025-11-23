@@ -1,15 +1,37 @@
 <template>
   <div class="welcome-cyber">
     <div class="assistant-container">
-      <div class="assistant-bubble">
-        ¡Hola! Soy tu asistente de seguridad. Aquí te mostraremos cómo proteger tus aplicaciones de ataques como IDOR y Mass Assignment. ¡Asegúrate de iniciar sesión!
-      </div>
-      <!-- Personaje Asistente (estilo robot/navegante) -->
-      <div class="assistant-icon">
+      <div
+        class="assistant-icon"
+        @click="toggleAssistantList"
+        :class="{ 'active': showVulnerabilityList }">
         <svg xmlns="http://www.w3.org/2000/svg" width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="animate-float">
             <path d="M12 2L2 7l10 5 10-5-10-5z"/>
             <path d="M2 17l10 5 10-5M2 12l10 5 10-5"/>
         </svg>
+      </div>
+
+      <div class="assistant-bubble" :class="{ 'expanded': showVulnerabilityList }">
+        <div v-if="!showVulnerabilityList" class="initial-message">
+            ¡Hola! Soy tu asistente de seguridad. Aquí te mostraremos cómo proteger tus aplicaciones de ataques como IDOR y Mass Assignment. ¡Haz clic en mí para ver el índice de fallos!
+        </div>
+
+        <div v-if="showVulnerabilityList" class="vulnerability-list-inner">
+            <h3 class="list-title">🛡️ Índice de Fallos de Seguridad</h3>
+            <div
+              v-for="v in vulnerabilidades"
+              :key="v.id"
+              class="vulnerability-item"
+              @click.stop="toggleVulnerabilityDetails(v.id)">
+                <div class="vulnerability-header">
+                    <span class="vulnerability-name">{{ v.id }}. {{ v.nombre }}</span>
+                    <span class="vulnerability-icon">{{ v.isOpen ? '▲' : '▼' }}</span>
+                </div>
+                <div v-if="v.isOpen" class="vulnerability-details">
+                    <p class="simple-description">{{ v.descripcionSimple }}</p>
+                </div>
+            </div>
+        </div>
       </div>
     </div>
 
@@ -26,7 +48,7 @@
 
       <div class="card-body">
         <p class="card-description">
-          ¡Bienvenido! Este entorno controlado te permite explorar fallos de seguridad críticos como **IDOR**, **Broken Access Control** o **Mass Assignment** dentro de un simulador bancario.
+          ¡Bienvenido! Este entorno controlado te permite explorar fallos de seguridad críticos dentro de un simulador bancario.
         </p>
       </div>
 
@@ -35,23 +57,24 @@
       </p>
 
       <div class="button-container">
-        <!-- Botón Primario: Iniciar Sesión (Azul brillante con texto blanco) -->
         <button class="btn-primary" @click="goLogin">
           Iniciar Sesión
         </button>
-        <!-- Botón Secundario: Registrarse (Contorno oscuro con texto claro) -->
         <button class="btn-secondary" @click="goRegister">
           Registrarse
         </button>
       </div>
-
     </div>
+
   </div>
 </template>
 
 <script setup>
 import { useRouter } from 'vue-router'
+import { ref } from 'vue'
+
 const router = useRouter()
+const showVulnerabilityList = ref(false)
 
 const goRegister = () => {
   router.push('/register')
@@ -60,18 +83,71 @@ const goRegister = () => {
 const goLogin = () => {
   router.push('/login')
 }
+
+// Array de vulnerabilidades con descripción simple para público no técnico
+const vulnerabilidades = ref([
+  {
+    id: 1,
+    nombre: "Inyección SQL",
+    descripcionSimple: "Un atacante puede **manipular lo que el sistema pide a la base de datos**, logrando ver o cambiar información que no le pertenece (como datos de otros usuarios o cuentas bancarias)."
+    , isOpen: false
+  },
+  {
+    id: 2,
+    nombre: "Token Inseguro",
+    descripcionSimple: "Los **identificadores de tu sesión** (tokens) son muy fáciles de adivinar o copiar, permitiendo que un tercero se haga pasar por ti sin conocer tu contraseña."
+    , isOpen: false
+  },
+  {
+    id: 3,
+    nombre: "Contraseñas en Texto Plano",
+    descripcionSimple: "El sistema **guarda tu contraseña sin protegerla** (sin cifrado), lo que significa que cualquiera que acceda a la base de datos (incluso un empleado) puede leer tu clave."
+    , isOpen: false
+  },
+  {
+    id: 4,
+    nombre: "Robo y Reutilización de Token",
+    descripcionSimple: "Aunque cierres tu sesión de forma normal, el **código de acceso (token) sigue siendo válido**. Si un atacante lo robó antes, puede seguir entrando a tu cuenta cuando quiera."
+    , isOpen: false
+  },
+  {
+    id: 5,
+    nombre: "IDOR (Referencia Insegura a Objeto Directo)",
+    descripcionSimple: "El sistema **no comprueba si eres el dueño de la información** que solicitas. Si cambias el número de cuenta en la dirección web, puedes ver los datos de otra persona."
+    , isOpen: false
+  },
+  {
+    id: 6,
+    nombre: "Vista no Protegida por Login",
+    descripcionSimple: "Existe una página (o vista) importante que **se puede ver sin haber iniciado sesión**. Un atacante puede acceder a funciones o información confidencial sin usar usuario ni contraseña."
+    , isOpen: false
+  },
+])
+
+const toggleAssistantList = () => {
+  showVulnerabilityList.value = !showVulnerabilityList.value
+}
+
+const toggleVulnerabilityDetails = (id) => {
+  const v = vulnerabilidades.value.find(item => item.id === id)
+  if (v) {
+    v.isOpen = !v.isOpen
+  }
+}
 </script>
 
 <style scoped>
-/* --- VARIABLES Y FUENTES (Tema Ciberseguridad Oscuro) --- */
+/* --- NUEVAS VARIABLES (Paleta Oscura/Sobria) --- */
 :root {
-    --color-primary: #00FFC2; /* Verde/Cian Neón para el acento */
-    --color-primary-dark: #00cc99;
-    --color-background: #111827; /* Fondo muy oscuro */
-    --color-card-bg: #1f2937; /* Fondo de tarjeta un poco más claro */
-    --color-text-light: #f9fafb;
-    --color-text-subtle: #9ca3af;
-    --color-border: #374151;
+    --color-primary: #3b82f6; /* Azul más corporativo */
+    --color-primary-dark: #2563eb;
+    --color-accent: #fcd34d; /* Amarillo para el acento/alerta */
+    --color-background: #0f172a; /* Fondo muy oscuro (slate/navy) */
+    --color-card-bg: #1e293b; /* Fondo de tarjeta un poco más claro */
+    --color-text-light: #f1f5f9;
+    --color-text-subtle: #94a3b8;
+    --color-border: #334155;
+    --color-error: #ef4444;
 }
 
 /* Animación del Asistente */
@@ -102,7 +178,7 @@ const goLogin = () => {
     display: flex;
     flex-direction: column;
     align-items: flex-end;
-    max-width: 300px;
+    max-width: 450px;
     z-index: 10;
 }
 
@@ -111,12 +187,20 @@ const goLogin = () => {
     border: 1px solid var(--color-primary);
     color: var(--color-text-light);
     padding: 15px;
-    border-radius: 12px;
+    border-radius: 12px 12px 0 12px;
     margin-bottom: 10px;
     position: relative;
     font-size: 0.9rem;
     text-align: left;
-    box-shadow: 0 4px 10px rgba(0, 255, 194, 0.15);
+    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.4);
+    min-width: 280px;
+    transition: all 0.3s ease;
+}
+
+.assistant-bubble.expanded {
+    min-width: 350px;
+    padding: 20px;
+    border-color: var(--color-accent);
 }
 
 .assistant-bubble::after {
@@ -129,13 +213,87 @@ const goLogin = () => {
     border-left: 10px solid transparent;
     border-right: 10px solid transparent;
     border-top: 10px solid var(--color-primary);
+    transition: all 0.3s ease;
 }
+
+.assistant-bubble.expanded::after {
+    border-top: 10px solid var(--color-accent);
+}
+
 
 .assistant-icon {
     color: var(--color-primary);
+    cursor: pointer;
     animation: float 3s ease-in-out infinite;
+    transition: all 0.3s ease;
 }
 
+.assistant-icon:hover {
+    color: var(--color-accent);
+}
+
+.assistant-icon.active {
+    animation: none;
+    color: var(--color-accent);
+    transform: scale(1.1);
+}
+
+/* --- LISTA DENTRO DEL GLOBO (Estilo Terminal) --- */
+.vulnerability-list-inner {
+    max-height: 400px;
+    overflow-y: auto;
+    padding-right: 5px;
+}
+
+.list-title {
+    font-size: 1.1rem;
+    color: var(--color-accent);
+    margin-bottom: 10px;
+    padding-bottom: 5px;
+    border-bottom: 1px dashed var(--color-border);
+}
+
+.vulnerability-item {
+    padding: 8px 0;
+    border-bottom: 1px dotted var(--color-border);
+    transition: background-color 0.2s;
+}
+
+.vulnerability-item:last-child {
+    border-bottom: none;
+}
+
+.vulnerability-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    font-weight: 600;
+    color: var(--color-text-light);
+}
+
+.vulnerability-name {
+    flex-grow: 1;
+    color: var(--color-primary);
+}
+
+.vulnerability-icon {
+    color: var(--color-accent);
+    font-size: 0.7rem;
+    margin-left: 10px;
+}
+
+.vulnerability-details {
+    padding: 5px 0 0 10px;
+    font-size: 0.8rem;
+    color: var(--color-text-subtle);
+}
+
+.simple-description {
+    margin-top: 5px;
+    color: var(--color-text-light);
+    font-weight: 400;
+    line-height: 1.4;
+}
 
 /* --- TARJETA PRINCIPAL (Dark Card) --- */
 .card-glass-dark {
@@ -144,12 +302,12 @@ const goLogin = () => {
   background: var(--color-card-bg);
   padding: 40px;
   border-radius: 18px;
-  box-shadow: 0 20px 50px rgba(0, 0, 0, 0.3);
+  box-shadow: 0 20px 50px rgba(0, 0, 0, 0.5);
   border: 1px solid var(--color-border);
   text-align: center;
 }
 
-/* --- HEADER Y TÍTULOS --- */
+/* --- HEADER Y TÍTULOS (Sin Cambios) --- */
 .card-header {
   margin-bottom: 30px;
   padding-bottom: 20px;
@@ -159,7 +317,7 @@ const goLogin = () => {
 .card-title {
   font-size: 2.2rem;
   font-weight: 800;
-  color: var(--color-primary); /* Título en color de acento */
+  color: var(--color-primary);
   margin: 0;
   display: flex;
   align-items: center;
@@ -168,7 +326,7 @@ const goLogin = () => {
 }
 
 .lock-icon {
-    color: var(--color-text-subtle);
+    color: var(--color-accent);
 }
 
 .card-subtitle {
@@ -177,7 +335,7 @@ const goLogin = () => {
   margin-top: 5px;
 }
 
-/* --- CUERPO --- */
+/* --- CUERPO (Sin Cambios) --- */
 .card-description {
     font-size: 1rem;
     color: var(--color-text-light);
@@ -188,14 +346,14 @@ const goLogin = () => {
 .cta-message {
     font-size: 1rem;
     font-weight: 600;
-    color: var(--color-primary);
+    color: var(--color-accent);
     margin-bottom: 30px;
     padding: 10px;
     border: 1px dashed var(--color-border);
     border-radius: 8px;
 }
 
-/* --- BOTONES --- */
+/* --- BOTONES (Sin Cambios) --- */
 .button-container {
   display: flex;
   gap: 20px;
@@ -204,7 +362,7 @@ const goLogin = () => {
 
 .btn-primary, .btn-secondary {
     padding: 14px 24px;
-    border-radius: 12px;
+    border-radius: 8px;
     border: none;
     cursor: pointer;
     font-weight: 700;
@@ -213,30 +371,30 @@ const goLogin = () => {
     min-width: 150px;
 }
 
-/* 1. Botón Principal (Iniciar Sesión): Cian/Neón */
+/* 1. Botón Principal (Iniciar Sesión): Azul */
 .btn-primary {
     background-color: var(--color-primary);
-    color: var(--color-background); /* Texto oscuro sobre neón */
-    box-shadow: 0 6px 15px rgba(0, 255, 194, 0.3);
+    color: var(--color-text-light);
+    box-shadow: 0 4px 10px rgba(59, 130, 246, 0.3);
 }
 
 .btn-primary:hover {
     background-color: var(--color-primary-dark);
-    box-shadow: 0 8px 20px rgba(0, 255, 194, 0.5);
+    box-shadow: 0 6px 15px rgba(59, 130, 246, 0.5);
     transform: translateY(-2px);
 }
 
-/* 2. Botón Secundario (Registrarse): Transparente/Contorno */
+/* 2. Botón Secundario (Registrarse): Contorno */
 .btn-secondary {
     background: none;
     border: 2px solid var(--color-border);
-    color: var(--color-text-light); /* Texto claro */
+    color: var(--color-text-light);
 }
 
 .btn-secondary:hover {
     background-color: var(--color-border);
-    border-color: var(--color-primary);
-    color: var(--color-primary);
+    border-color: var(--color-accent);
+    color: var(--color-accent);
 }
 
 /* Responsive para Móviles */
@@ -247,6 +405,13 @@ const goLogin = () => {
         margin-bottom: 20px;
         max-width: 100%;
         text-align: left;
+        right: auto;
+    }
+    .assistant-bubble {
+        min-width: 100%;
+    }
+    .assistant-bubble.expanded {
+        min-width: 100%;
     }
     .assistant-bubble::after {
         right: auto;
@@ -265,11 +430,3 @@ const goLogin = () => {
     }
 }
 </style>
-
-
-Con este rediseño:
-1.  **Estilo:** Es un tema oscuro (`#111827`) que se ve profesional y asociado a la ciberseguridad.
-2.  **Botones:** El botón **Iniciar Sesión** es cian/verde neón brillante con texto oscuro (máximo contraste) y se destaca.
-3.  **Asistente:** Se añadió un personaje flotante (`.assistant-icon` con la clase `animate-float`) con un globo de texto (`.assistant-bubble`) para cumplir con tu solicitud de un "muñequito que vuele y explique".
-
-Espero que este diseño sea el que buscabas. Ahora, podemos avanzar a la página de Transferencias.

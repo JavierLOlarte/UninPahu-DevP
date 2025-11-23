@@ -58,7 +58,6 @@
             </button>
           </div>
 
-          <!-- BOTÓN DE REGISTRO - CORREGIDO AQUÍ, LA CLASE DEL PADRE SE AJUSTA EN CSS -->
           <div class="actions extra">
             <button
               type="button"
@@ -86,9 +85,23 @@
     </div>
 
     <div class="assistant-container">
-      <button class="assistant-button" @click="isAssistantOpen = !isAssistantOpen" :aria-expanded="isAssistantOpen" :title="isAssistantOpen ? 'Cerrar Asistente' : 'Abrir Asistente de SQLi'">
-        <svg v-if="isAssistantOpen" class="icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
-        <svg v-else class="icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2a5 5 0 0 0-5 5c0 1.5 1 4 5 7 4-3 5-5.5 5-7a5 5 0 0 0-5-5z"></path><path d="M12 18c-2 0-3.5-1-4-3h8c-.5 2-2 3-4 3z"></path><line x1="12" y1="2" x2="12" y2="3"></line><line x1="21" y1="7" x2="20" y2="8"></line><line x1="3" y1="7" x2="4" y2="8"></line><line x1="18.5" y1="14.5" x2="19.5" y2="15.5"></line><line x1="4.5" y1="14.5" x2="5.5" y2="15.5"></line></svg>
+      <div v-if="!isAssistantOpen" class="assistant-callout animate-pulse-float">
+        ¡Pista SQLi aquí!
+      </div>
+      <button
+        class="assistant-button"
+        @click="isAssistantOpen = !isAssistantOpen"
+        :aria-expanded="isAssistantOpen"
+        :title="isAssistantOpen ? 'Cerrar Asistente' : 'Abrir Asistente de SQLi'">
+
+        <svg v-if="isAssistantOpen" class="icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <line x1="18" y1="6" x2="6" y2="18"></line>
+            <line x1="6" y1="6" x2="18" y2="18"></line>
+        </svg>
+        <svg v-else class="icon" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="transform: scale(1.4); animation: float 3s ease-in-out infinite;">
+            <path d="M12 2L2 7l10 5 10-5-10-5z"/>
+            <path d="M2 17l10 5 10-5M2 12l10 5 10-5"/>
+        </svg>
       </button>
 
       <Transition name="assistant-fade-slide">
@@ -140,7 +153,6 @@ const router = useRouter()
 // estado
 const email = ref('')
 const password = ref('')
-// ELIMINAMOS 'remember'
 const showPassword = ref(false)
 const loading = ref(false)
 const message = ref('')
@@ -162,6 +174,7 @@ const advanceHint = () => {
 
 // --- MENSAJES DINÁMICOS DEL ASISTENTE (NIVELES DE PISTA) ---
 const assistantMessage = computed(() => {
+    // Payload clásico para MySQL o backends similares
     const SQL_PAYLOAD = "' OR 1=1 -- ";
 
     if (user.value) {
@@ -347,7 +360,7 @@ onMounted(() => {
 </script>
 
 
-<style scoped>
+<style>
 /* ========================================================== */
 /* CONFIGURACION DE COLORES Y VARIABLES */
 /* ========================================================== */
@@ -363,8 +376,15 @@ onMounted(() => {
     --text-subtle: #a0c2e6; /* Texto sutil */
     --focus-glow: rgba(76, 143, 255, 0.2);
     /* Colores del asistente */
-    --assistant-primary: #ffc107; /* Amarillo */
+    --assistant-primary: #4ade80; /* Verde brillante */
     --assistant-bg: #101a35; /* Fondo del modal */
+    --assistant-callout-bg: #ffc107; /* Amarillo para el texto flotante */
+    --assistant-callout-text: #1e284a; /* Color de texto para el callout */
+
+    /* Colores para el bloque de Sesión Activa */
+    --session-active-text: #e5f1ff; /* Azul muy claro para texto general */
+    --session-active-strong: #94c2ff; /* Azul más brillante para strong */
+    --session-active-code: #b2d2ff; /* Azul ligeramente más claro para código */
 }
 
 /* --- ANIMACIONES GLOBALES DE FONDO --- */
@@ -383,6 +403,20 @@ onMounted(() => {
   100% { filter: drop-shadow(0 0 15px rgba(76, 143, 255, 0.8)); }
 }
 
+@keyframes float {
+    0% { transform: translateY(0px) scale(1.4); }
+    50% { transform: translateY(-5px) scale(1.4); }
+    100% { transform: translateY(0px) scale(1.4); }
+}
+
+/* Nueva animación para el texto flotante */
+@keyframes pulse-float {
+    0% { transform: scale(1) translateX(0px); opacity: 1; }
+    50% { transform: scale(1.05) translateX(-3px); opacity: 0.9; }
+    100% { transform: scale(1) translateX(0px); opacity: 1; }
+}
+
+
 .page.form-page-animated {
   min-height: 100vh;
   display: grid;
@@ -396,7 +430,6 @@ onMounted(() => {
   background-size: 300% 300%;
   animation: gradient-animation 15s ease infinite;
   position: relative;
-  /* La línea background-image: none; fue eliminada de aquí */
 }
 
 /* --- Efecto de Fondo "Malla" --- */
@@ -407,7 +440,7 @@ onMounted(() => {
   left: 0;
   width: 100%;
   height: 100%;
-  background-image: url("data:image/svg+xml;charset=UTF-8,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%233c7dff' fill-opacity='0.08'%3E%3Cpath d='M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zm0-30V0H4v4H0v2h4v4h2V6h4V4H6z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E");
+  background-image: url("data:image/svg+xml;charset=UTF-8,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%233c7dff' fill-opacity='0.08'%3E%3Cpath d='M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zm0-30V0H4v4H0v2h4v4h2V6h4V4H6z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E");
   opacity: 0.8;
   pointer-events: none;
   animation: background-pan 60s linear infinite;
@@ -462,7 +495,6 @@ onMounted(() => {
     color: var(--primary-blue-start);
     line-height: 1;
 }
-/* El resto de los estilos del logo, input, botones y asistente son correctos y se mantienen. */
 
 /* --- INPUTS --- */
 .input-group { margin-bottom: 22px; }
@@ -512,6 +544,7 @@ onMounted(() => {
     font-weight: 700; font-size: 1.1rem; transition: all 0.35s cubic-bezier(0.25, 0.8, 0.25, 1);
     letter-spacing: 0.03em; position: relative; overflow: hidden;
     display: flex; align-items: center; justify-content: center; gap: 10px;
+    width: 100%; /* Asegura que el botón ocupe todo el ancho */
 }
 .primary-animated {
     background: linear-gradient(90deg, var(--primary-blue-start), var(--primary-blue-end));
@@ -532,8 +565,8 @@ onMounted(() => {
 .actions.extra {
     margin-top: 15px;
     margin-bottom: 10px;
-    display: flex; /* Añadido para habilitar el centrado */
-    justify-content: center; /* Centra el botón horizontalmente */
+    display: flex;
+    justify-content: center;
 }
 .secondary-animated {
     background: transparent; color: var(--text-subtle);
@@ -542,7 +575,7 @@ onMounted(() => {
     max-width: 100%; border-radius: 12px; display: block;
 }
 .secondary-animated.wide-btn {
-    width: 100%; /* Se eliminó el max-width: 300px para que ocupe todo el ancho disponible */
+    width: 100%;
 }
 .secondary-animated:hover {
     background: rgba(76, 143, 255, 0.1); border-color: rgba(76, 143, 255, 0.3);
@@ -558,9 +591,42 @@ onMounted(() => {
 .fail { background: rgba(220,53,69,0.15); border: 1px solid #dc3545; }
 .error { color: #ffb4b4; font-size: 0.8rem; margin-top: 4px; }
 .help { margin-top: 25px; text-align: center; color: var(--text-subtle); font-size: 0.8rem; }
-.result { margin-top:20px; background: rgba(0, 123, 255, 0.05); padding:15px; border-radius:10px; border:1px solid rgba(0, 123, 255, 0.1); }
-.result h3 { margin-top: 0; font-size: 16px; color: #7fbdff; }
-.result pre { white-space:pre-wrap; word-break:break-word; color:#dbefff; font-size:14px; margin: 5px 0 10px 0;}
+
+/* MODIFICACIONES PARA EL BLOQUE DE SESIÓN ACTIVA */
+.result {
+    margin-top:20px;
+    background: rgba(0, 123, 255, 0.05);
+    padding:15px;
+    border-radius:10px;
+    border:1px solid rgba(0, 123, 255, 0.1);
+    color: var(--session-active-text); /* Color de texto general */
+}
+.result h3 {
+    margin-top: 0;
+    font-size: 16px;
+    color: var(--primary-blue-start); /* Título "Sesión Activa" */
+}
+.result pre {
+    white-space:pre-wrap;
+    word-break:break-word;
+    color: var(--session-active-text); /* Color del email en pre */
+    font-size:14px;
+    margin: 5px 0 10px 0;
+}
+.result p { /* Para el párrafo que contiene el "Token de Sesión (inseguro)" */
+    color: var(--session-active-text);
+}
+.result p strong { /* Para el texto "Token de Sesión (inseguro):" */
+    color: var(--session-active-strong);
+}
+.result p code { /* Para el código del token */
+    background: #0d1226;
+    color: var(--session-active-code);
+    padding: 3px 6px;
+    border-radius: 6px;
+    font-family: monospace;
+    font-size: 0.9em;
+}
 .btn-link {
     background: none; border: none; color: #7fbdff; text-decoration: underline;
     cursor: pointer; font-size: 0.9rem; padding: 0; margin-top: 10px; display: block;
@@ -575,28 +641,51 @@ onMounted(() => {
 }
 
 /* ========================================================== */
-/* ESTILOS DEL ASISTENTE VIRTUAL (Mantenidos) */
+/* ESTILOS DEL ASISTENTE VIRTUAL */
 /* ========================================================== */
 .assistant-container {
   position: fixed; bottom: 30px; right: 30px; z-index: 100;
+  display: flex;
+  align-items: center;
 }
+
+/* Texto flotante del asistente */
+.assistant-callout {
+    background: var(--assistant-callout-bg);
+    color: var(--assistant-callout-text);
+    padding: 8px 12px;
+    border-radius: 8px;
+    font-size: 14px;
+    font-weight: 700;
+    margin-right: 15px; /* Separación del botón */
+    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.3);
+    cursor: pointer;
+    transition: transform 0.3s;
+}
+
+.assistant-callout:hover {
+    transform: scale(1.05);
+}
+
+.animate-pulse-float {
+    animation: pulse-float 2s ease-in-out infinite alternate;
+}
+
 .assistant-button {
   width: 55px; height: 55px; border-radius: 50%; border: none;
-  /* CAMBIOS PRINCIPALES AQUÍ: */
-  background: #4ade80; /* Un verde más brillante */
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.6), 0 0 20px 5px rgba(74, 222, 128, 0.8); /* Sombra más fuerte y brillo */
-  /* FIN DE CAMBIOS */
+  background: var(--assistant-primary);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.6), 0 0 20px 5px rgba(74, 222, 128, 0.8);
   color: #1e284a; display: flex; align-items: center;
   justify-content: center; cursor: pointer;
-  /* Mantenemos la transición y el tamaño */
   transition: transform 0.2s, box-shadow 0.2s;
 }
- /* Efecto Hover para hacerlo más dinámico */
- .assistant-button:hover {
-     transform: scale(1.1); /* Crece ligeramente al pasar el mouse */
-     box-shadow: 0 4px 15px rgba(0, 0, 0, 0.8), 0 0 30px 8px rgba(74, 222, 128, 1); /* Sombra un poco más intensa al interactuar */
- }
+
+.assistant-button:hover {
+     transform: scale(1.1);
+     box-shadow: 0 4px 15px rgba(0, 0, 0, 0.8), 0 0 30px 8px rgba(74, 222, 128, 1);
+}
 .assistant-button .icon { stroke: #1e284a; transition: stroke 0.2s; }
+.assistant-button .icon.active { animation: none; transform: scale(1); }
 
 .assistant-modal {
     position: absolute; bottom: 70px; right: 0; width: 300px;
@@ -675,11 +764,11 @@ onMounted(() => {
   .card-inner { padding:25px; }
   .title-animated { font-size: 1.8rem; }
   .btn-animated { font-size: 1rem; }
-  .btn-animated { font-size: 1rem; }
   .actions.extra { margin-top: 10px; }
 
   /* responsive assistant */
     .assistant-container { bottom: 15px; right: 15px; }
+    .assistant-callout { display: none; } /* Ocultar en móviles para no saturar */
     .assistant-modal { width: calc(100vw - 30px); bottom: 75px; right: 0; left: 0; margin: 0 auto; }
 }
 </style>

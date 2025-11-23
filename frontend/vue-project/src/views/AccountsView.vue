@@ -1,5 +1,85 @@
 <template>
   <div class="accounts-page-modern">
+
+    <div class="assistant-container">
+      <div
+        class="assistant-icon"
+        @click="toggleAssistantList"
+        :class="{ 'active': showVulnerabilityList }">
+        <svg xmlns="http://www.w3.org/2000/svg" width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="animate-float">
+            <path d="M12 2L2 7l10 5 10-5-10-5z"/>
+            <path d="M2 17l10 5 10-5M2 12l10 5 10-5"/>
+        </svg>
+      </div>
+
+      <div class="assistant-bubble" :class="{ 'expanded': showVulnerabilityList }">
+        <div v-if="!showVulnerabilityList" class="initial-message">
+            ¡Bienvenido! Esta es la vista más importante. **Haz clic en mí** para ver qué fallos de seguridad críticos puedes encontrar aquí.
+        </div>
+
+        <div v-if="showVulnerabilityList" class="vulnerability-list-inner">
+            <h3 class="list-title">🎯 Fallos IDOR (Insecure Direct Object Reference)</h3>
+
+            <div class="vulnerability-item" @click.stop="vulnerabilidades[0].isOpen = !vulnerabilidades[0].isOpen">
+                <div class="vulnerability-header">
+                    <span class="vulnerability-name">1. IDOR: Ver Cuentas de Otros (GET)</span>
+                    <span class="vulnerability-icon">{{ vulnerabilidades[0].isOpen ? '▲' : '▼' }}</span>
+                </div>
+                <div v-if="vulnerabilidades[0].isOpen" class="vulnerability-details">
+                    <p class="simple-description">Utiliza el **Panel de Desarrollo (IDOR PoC)** de abajo. Si pones el ID de una cuenta que no es tuya, y el sistema te la muestra, ¡has encontrado el fallo!</p>
+                </div>
+            </div>
+
+            <div class="vulnerability-item" @click.stop="vulnerabilidades[1].isOpen = !vulnerabilidades[1].isOpen">
+                <div class="vulnerability-header">
+                    <span class="vulnerability-name">2. IDOR: Modificar Saldo Ajeno (PUT)</span>
+                    <span class="vulnerabilidades-icon">{{ vulnerabilidades[1].isOpen ? '▲' : '▼' }}</span>
+                </div>
+                <div v-if="vulnerabilidades[1].isOpen" class="vulnerability-details">
+                    <p class="simple-description">La función 'Editar Saldo' funciona solo en tus cuentas desde el *front-end*. Para explotar el *back-end*, utiliza **Postman** (o DevTools) para interceptar la URL de actualización (`/api/accounts/{id}/balance`), cambia el `{id}` por el de otra cuenta, y verifica si logras modificar el saldo de un tercero.</p>
+                </div>
+            </div>
+
+            <div class="vulnerability-item" @click.stop="vulnerabilidades[4].isOpen = !vulnerabilidades[4].isOpen">
+                <div class="vulnerability-header">
+                    <span class="vulnerability-name">3. IDOR: Eliminar Cuenta Ajena (DELETE)</span>
+                    <span class="vulnerability-icon">{{ vulnerabilidades[4].isOpen ? '▲' : '▼' }}</span>
+                </div>
+                <div v-if="vulnerabilidades[4].isOpen" class="vulnerability-details">
+                    <p class="simple-description">Desde el *front-end* solo puedes eliminar tus cuentas. El reto es replicar este fallo en el *back-end*: utiliza una herramienta externa (**Postman**) para enviar una petición **DELETE** a la URL de eliminación (`/api/accounts/{id}`), cambiando el `{id}` por el de un usuario distinto. ¡El control de acceso es débil!</p>
+                </div>
+            </div>
+
+            <h3 class="list-title secondary-title">💡 Fallos de Sesión y Datos</h3>
+
+            <div class="vulnerability-item" @click.stop="vulnerabilidades[2].isOpen = !vulnerabilidades[2].isOpen">
+                <div class="vulnerability-header">
+                    <span class="vulnerability-name">4. Contraseñas y Tokens sin Cifrar</span>
+                    <span class="vulnerability-icon">{{ vulnerabilidades[2].isOpen ? '▲' : '▼' }}</span>
+                </div>
+                <div v-if="vulnerabilidades[2].isOpen" class="vulnerability-details">
+                    <p class="simple-description">Este es un fallo doble:
+                        <br/>
+                        **Contraseñas:** Confirma en la **base de datos** si las contraseñas están almacenadas como texto simple (plaintext).
+                        <br/>
+                        **Token:** Revisa el **Token de Sesión** almacenado en el Local Storage. Si su contenido es legible o no está adecuadamente cifrado, es una debilidad grave en el manejo de datos sensibles.
+                    </p>
+                </div>
+            </div>
+
+            <div class="vulnerability-item" @click.stop="vulnerabilidades[3].isOpen = !vulnerabilidades[3].isOpen">
+                <div class="vulnerability-header">
+                    <span class="vulnerability-name">5. Token Reutilizable (Falta de Invalidación)</span>
+                    <span class="vulnerabilidad-icon">{{ vulnerabilidades[3].isOpen ? '▲' : '▼' }}</span>
+                </div>
+                <div v-if="vulnerabilidades[3].isOpen" class="vulnerability-details">
+                    <p class="simple-description">Tu Token de Acceso se guarda en el navegador (**Local Storage**). Cópialo, luego **cierra sesión**. Si utilizas ese mismo token copiado para acceder a un recurso restringido (por ejemplo, con Postman), y el acceso se mantiene, ¡el token no se invalidó al cerrar la sesión!</p>
+                </div>
+            </div>
+
+        </div>
+      </div>
+    </div>
     <header class="header-modern">
       <h1 class="page-title">💼 Mis Cuentas</h1>
       <div class="actions-group">
@@ -98,6 +178,7 @@
           <div class="idor-row">
             <input v-model="probeId" placeholder="ej. 2" class="idor-input" />
             <button class="btn-dev-action" @click="probeAccount">Consultar</button>
+            <button class="btn-dev-secondary" @click="deleteOwnAccount">Eliminar Mi Cuenta (PoC)</button>
           </div>
 
           <div v-if="probeResult" class="probe-result">
@@ -120,6 +201,28 @@ import axios from 'axios'
 import { useRouter } from 'vue-router'
 
 const router = useRouter()
+// --- LÓGICA DEL ASISTENTE ---
+const showVulnerabilityList = ref(false)
+const vulnerabilidades = ref([
+    // IDOR - Lectura (GET)
+    { id: 1, nombre: "IDOR: Lectura", isOpen: false },
+    // IDOR - Modificación de Saldo (PUT)
+    { id: 2, nombre: "IDOR: Escritura Saldo", isOpen: false },
+    // Contraseñas y Token sin cifrar
+    { id: 3, nombre: "Cifrado débil", isOpen: false },
+    // Robo de Token (Invalidación)
+    { id: 4, nombre: "Token Reutilizable", isOpen: false },
+    // IDOR - Eliminar Cuenta (DELETE) <--- Nueva
+    { id: 5, nombre: "IDOR: Eliminación Cuenta", isOpen: false },
+])
+
+const toggleAssistantList = () => {
+  showVulnerabilityList.value = !showVulnerabilityList.value
+}
+// El resto de la lógica del asistente se mantiene igual.
+// --- FIN LÓGICA DEL ASISTENTE ---
+
+
 const user = ref(null)
 const accounts = ref([])
 const loading = ref(false)
@@ -131,15 +234,13 @@ const globalMessageType = ref('') // 'error' | 'success'
 
 // Función de formato de moneda (esencial para una app bancaria)
 const formatCurrency = (value) => {
-    // Usamos 'es-CO' para pesos colombianos (COP), pero con formato simple para mantenerlo limpio
-    // Convertimos a string para asegurar que la función toLocaleString esté disponible
     const num = Number(value);
     if (isNaN(num)) return '$0';
 
     return num.toLocaleString('es-CO', {
       style: 'currency',
       currency: 'COP',
-      minimumFractionDigits: 0, // Quitamos decimales para simplificar
+      minimumFractionDigits: 0,
       maximumFractionDigits: 0,
     });
 };
@@ -157,7 +258,6 @@ const loadSession = () => {
         // Configurar el token para todas las peticiones
         axios.defaults.headers.common['Authorization'] = `Bearer ${token}`
     } catch (e) {
-        // Fallback si el JSON está corrupto
         console.error("Error parsing user data:", e)
         user.value = null
         localStorage.removeItem('vulnapp_token')
@@ -175,8 +275,7 @@ const logout = () => {
   router.push('/login')
 }
 
-// Obtiene la lista de cuentas (solo las del usuario logueado en un entorno real,
-// pero aquí cargará las cuentas generales por cómo configuraremos el backend vulnerable)
+// Obtiene la lista de cuentas
 const fetchAccounts = async () => {
   if (!user.value) return;
 
@@ -186,14 +285,8 @@ const fetchAccounts = async () => {
   probeError.value = ''
   globalMessage.value = ''
   try {
-
-    // NOTA: Esta API endpoint es VULNERABLE.
-    // En un entorno seguro, esta ruta debería obtener las cuentas asociadas al 'user.id'
-    // implícitamente a través del token de autenticación. Aquí, el backend simplemente
-    // lista todas las cuentas o usa el ownerId para filtrar si existe.
+    // Nota: El backend VULNERABLE permite filtrar por ownerId pero no lo fuerza
     const res = await axios.get('http://localhost:8080/api/accounts', {
-        // Pasamos el ownerId como parámetro. Si el backend es débil,
-        // podría ignorar la verificación de autenticación.
         params: { ownerId: user.value.id }
     })
 
@@ -201,7 +294,7 @@ const fetchAccounts = async () => {
       ...a,
       editing: false,
       updating: false,
-      newBalance: a.monto || 0, // Inicializar newBalance con el monto actual
+      newBalance: a.monto || 0,
     }))
   } catch (err) {
     console.error(err)
@@ -212,27 +305,56 @@ const fetchAccounts = async () => {
   }
 }
 
-const goCreate = () => router.push('/accounts/create') // Pendiente de crear esta ruta
-const goDetail = (id) => router.push(`/accounts/${id}`) // Pendiente de crear esta ruta
+const goCreate = () => router.push('/accounts/create')
+const goDetail = (id) => router.push(`/accounts/${id}`)
 const goLogin = () => router.push('/login')
 
-// PoC IDOR: Prueba de Insecure Direct Object Reference (VULNERABLE)
+// PoC IDOR: Prueba de Insecure Direct Object Reference (VULNERABLE) - Lectura
 const probeAccount = async () => {
   probeResult.value = null
   probeError.value = ''
   if (!probeId.value) { probeError.value = 'Ingresa un id de cuenta'; return }
 
-  // RUTA CLAVE VULNERABLE: Intenta obtener la cuenta por ID sin verificar
-  // si la cuenta pertenece al usuario logueado.
   try {
+    // VULNERABLE: No verifica si la cuenta ID es del usuario logueado
     const res = await axios.get(`http://localhost:8080/api/accounts/${probeId.value}`)
-    probeResult.value = res.data // Muestra la data de CUALQUIER cuenta.
+    probeResult.value = res.data
   } catch (err) {
     console.error(err)
     probeError.value = err?.response?.data?.message ?? 'No se encontró la cuenta.'
   }
 }
 const clearProbe = () => { probeId.value = ''; probeResult.value = null; probeError.value = '' }
+
+
+// PoC IDOR: Prueba de Insecure Direct Object Reference (VULNERABLE) - Eliminación
+const deleteOwnAccount = async () => {
+    const defaultAccountId = accounts.value.length > 0 ? accounts.value[0].id : null;
+    if (!defaultAccountId) {
+        probeError.value = 'No tienes cuentas para eliminar (se usa la primera por defecto)';
+        return;
+    }
+
+    if (!confirm(`¿Estás seguro de eliminar tu primera cuenta (ID ${defaultAccountId})? Este botón existe para dar la pista de la vulnerabilidad DELETE.`)) {
+        return;
+    }
+
+    probeResult.value = null
+    probeError.value = ''
+    try {
+        // VULNERABLE: El endpoint permite la eliminación, y si el usuario cambia el ID en Postman, eliminará la cuenta de otro.
+        const res = await axios.delete(`http://localhost:8080/api/accounts/${defaultAccountId}`)
+
+        globalMessageType.value = 'success'
+        globalMessage.value = `Cuenta ${defaultAccountId} eliminada correctamente. ¡Prueba ahora con Postman y el ID de otra cuenta!`
+        fetchAccounts();
+    } catch (err) {
+        console.error(err)
+        globalMessageType.value = 'error'
+        globalMessage.value = err?.response?.data?.message ?? 'Error eliminando cuenta (¿IDOR exitoso en otra cuenta?)'
+    }
+}
+
 
 // Edición inline
 const startEdit = (acct) => {
@@ -248,7 +370,7 @@ const cancelEdit = (acct) => {
   globalMessage.value = ''
 }
 
-// Actualiza el saldo (VULNERABLE si el backend no verifica propiedad)
+// Actualiza el saldo (VULNERABLE)
 const updateBalance = async (acct) => {
   if (acct.newBalance === null || acct.newBalance === undefined || isNaN(acct.newBalance)) {
     globalMessageType.value = 'error'
@@ -256,7 +378,6 @@ const updateBalance = async (acct) => {
     return
   }
 
-  // El nuevo saldo no debe ser negativo
   if (acct.newBalance < 0) {
     globalMessageType.value = 'error'
     globalMessage.value = 'El saldo no puede ser negativo.'
@@ -266,8 +387,7 @@ const updateBalance = async (acct) => {
   acct.updating = true
   globalMessage.value = ''
   try {
-    // RUTA CLAVE VULNERABLE: PUT a un ID de cuenta. Si el backend no verifica
-    // que acct.id pertenece a user.id, es una vulnerabilidad IDOR.
+    // VULNERABLE: No verifica la propiedad de la cuenta ID
     const res = await axios.put(`http://localhost:8080/api/accounts/${acct.id}/balance`, {
       newBalance: acct.newBalance
     }, {
@@ -275,7 +395,6 @@ const updateBalance = async (acct) => {
     })
 
     const returned = res.data
-    // Intenta actualizar el monto con el valor devuelto por el backend
     const updatedMonto = returned?.monto ?? returned?.balance ?? acct.newBalance;
     acct.monto = updatedMonto;
 
@@ -290,7 +409,6 @@ const updateBalance = async (acct) => {
     globalMessage.value = msg
   } finally {
     acct.updating = false
-    // Limpiar mensaje de éxito después de 4 segundos
     setTimeout(() => {
         if (globalMessageType.value === 'success' && globalMessage.value) {
             globalMessage.value = '';
@@ -302,7 +420,6 @@ const updateBalance = async (acct) => {
 
 onMounted(() => {
     loadSession();
-    // Solo intentar cargar cuentas si hay un usuario. Si no, se muestra el botón de login.
     if (user.value) {
         fetchAccounts()
     }
@@ -322,6 +439,16 @@ onMounted(() => {
     --success-text: #059669;
     --error-bg: #fef2f2;
     --error-text: #ef4444;
+
+    /* PALETA ASISTENTE (Dark Mode Sobrio) */
+    --color-primary: #3b82f6;
+    --color-primary-dark: #2563eb;
+    --color-accent: #fcd34d;
+    --color-background-dark: #0f172a;
+    --color-card-bg-dark: #1e293b;
+    --color-text-light-dark: #f1f5f9;
+    --color-text-subtle-dark: #94a3b8;
+    --color-border-dark: #334155;
 }
 
 .accounts-page-modern {
@@ -389,11 +516,8 @@ onMounted(() => {
     display: flex;
     align-items: center;
     gap: 6px;
-
-    /* 🔴 CORRECCIÓN CLAVE: Asegura el fondo azul para el botón */
     background-color: var(--primary-blue) !important;
-
-    color: white !important; /* Mantenemos este para asegurar el texto */
+    color: white !important;
     padding: 8px 16px;
     border-radius: 10px;
     border: none;
@@ -404,7 +528,7 @@ onMounted(() => {
 }
 
 .btn-icon svg {
-    stroke: white !important; /* Mantenemos este para asegurar el ícono */
+    stroke: white !important;
 }
 
 .btn-icon:hover {
@@ -426,7 +550,7 @@ onMounted(() => {
     border-color: var(--primary-blue);
 }
 
-/* --- INFORMACIÓN DEL USUARIO (NUEVOS ESTILOS) --- */
+/* --- INFORMACIÓN DEL USUARIO --- */
 .user-info-card {
     background-color: #ffffff;
     border: 1px solid var(--border-light);
@@ -493,7 +617,7 @@ onMounted(() => {
 .accounts-grid {
     display: grid;
     gap: 20px;
-    grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); /* Responsivo */
+    grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
     margin-bottom: 30px;
 }
 .account-card {
@@ -522,12 +646,12 @@ onMounted(() => {
     text-transform: uppercase;
 }
 .type-saving {
-    background-color: #d1fae5; /* Green light */
-    color: #059669; /* Green dark */
+    background-color: #d1fae5;
+    color: #059669;
 }
 .type-checking {
-    background-color: #bfdbfe; /* Blue light */
-    color: #1d4ed8; /* Blue dark */
+    background-color: #bfdbfe;
+    color: #1d4ed8;
 }
 .account-ref {
     font-size: 0.85rem;
@@ -557,19 +681,16 @@ onMounted(() => {
     display: flex;
     gap: 8px;
     align-items: center;
-    /* Aseguramos que los elementos no se salgan del contenedor */
     flex-wrap: wrap;
 }
 
 .edit-input {
-    /* Permitimos que el input crezca más para ocupar espacio */
     flex-grow: 1;
     padding: 10px;
     border-radius: 8px;
     border: 1px solid var(--border-light);
     font-size: 1rem;
     transition: border-color 0.2s ease;
-    /* Forzamos un ancho mínimo para que ocupe toda la fila si no hay espacio */
     min-width: 120px;
 }
 .edit-input:focus {
@@ -692,7 +813,7 @@ onMounted(() => {
 /* --- PANEL DE DESARROLLO (IDOR PoC) --- */
 .dev-panel {
     margin-top: 40px;
-    background-color: #1f2937; /* Dark background para diferenciar */
+    background-color: #1f2937;
     border-radius: 12px;
     border: 1px solid #374151;
     color: #d1d5db;
@@ -730,7 +851,7 @@ onMounted(() => {
     color: #e5e7eb;
 }
 .btn-dev-action {
-    background-color: #059669; /* Verde para acción de prueba */
+    background-color: #059669;
     color: white;
     padding: 10px 16px;
     border-radius: 8px;
@@ -774,5 +895,183 @@ onMounted(() => {
     padding: 10px;
     border-radius: 8px;
     margin-top: 10px;
+}
+
+/* --- ESTILOS DEL ASISTENTE --- */
+
+@keyframes float {
+    0% { transform: translateY(0px); }
+    50% { transform: translateY(-10px); }
+    100% { transform: translateY(0px); }
+}
+
+.assistant-container {
+    position: fixed;
+    top: 50px;
+    right: 50px;
+    display: flex;
+    flex-direction: column-reverse;
+    align-items: flex-end;
+    max-width: 450px;
+    z-index: 1000;
+}
+
+.assistant-bubble {
+    background-color: var(--color-card-bg-dark);
+    border: 1px solid var(--color-primary);
+    color: var(--color-text-light-dark);
+    padding: 15px;
+    border-radius: 12px 0 12px 12px;
+    margin-bottom: 5px;
+    position: relative;
+    font-size: 0.9rem;
+    text-align: left;
+    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.4);
+    min-width: 280px;
+    transition: all 0.3s ease;
+    order: 1;
+}
+
+.assistant-bubble.expanded {
+    min-width: 350px;
+    padding: 20px;
+    border-color: var(--color-accent);
+}
+
+/* Flecha del Asistente apuntando al icono */
+.assistant-bubble::after {
+    content: '';
+    position: absolute;
+    bottom: 100%;
+    top: auto;
+    right: 10px;
+    width: 0;
+    height: 0;
+    border-left: 10px solid transparent;
+    border-right: 10px solid transparent;
+    border-top: none;
+    border-bottom: 10px solid var(--color-primary);
+    transition: all 0.3s ease;
+}
+.assistant-bubble.expanded::after {
+    border-bottom: 10px solid var(--color-accent);
+}
+
+
+.assistant-icon {
+    order: 2;
+    color: var(--color-primary);
+    cursor: pointer;
+    animation: float 3s ease-in-out infinite;
+    transition: all 0.3s ease;
+}
+
+.assistant-icon:hover {
+    color: var(--color-accent);
+}
+
+.assistant-icon.active {
+    animation: none;
+    color: var(--color-accent);
+    transform: scale(1.1);
+}
+
+/* --- LISTA DENTRO DEL GLOBO --- */
+.vulnerability-list-inner {
+    max-height: 400px;
+    overflow-y: auto;
+    padding-right: 5px;
+}
+
+.list-title {
+    font-size: 1rem;
+    color: var(--color-accent);
+    margin-bottom: 10px;
+    padding-bottom: 5px;
+    border-bottom: 1px dashed var(--color-border-dark);
+}
+.secondary-title {
+    margin-top: 15px;
+    color: var(--color-primary);
+}
+
+.vulnerability-item {
+    cursor: pointer;
+    padding: 8px 0;
+    border-bottom: 1px dotted var(--color-border-dark);
+    transition: background-color 0.2s;
+}
+
+.vulnerability-item:last-child {
+    border-bottom: none;
+}
+.vulnerability-item:hover {
+    background-color: rgba(59, 130, 246, 0.1);
+    border-radius: 4px;
+    padding: 8px;
+    margin: 0 -8px;
+}
+
+.vulnerability-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    font-weight: 600;
+    color: var(--color-text-light-dark);
+}
+
+.vulnerability-name {
+    flex-grow: 1;
+    color: var(--color-primary);
+}
+
+.vulnerability-icon {
+    color: var(--color-accent);
+    font-size: 0.7rem;
+    margin-left: 10px;
+}
+
+.vulnerability-details {
+    padding: 5px 0 0 10px;
+    font-size: 0.8rem;
+    color: var(--color-text-subtle-dark);
+}
+
+.simple-description {
+    margin-top: 5px;
+    color: var(--color-text-light-dark);
+    font-weight: 400;
+    line-height: 1.4;
+}
+
+/* Responsive para Móviles */
+@media (max-width: 768px) {
+    .assistant-container {
+        position: static;
+        align-items: flex-start;
+        margin: 20px 0 0 0;
+        right: auto;
+        left: 16px;
+        max-width: 90%;
+        display: flex;
+        flex-direction: column;
+    }
+    .assistant-bubble {
+        min-width: 100%;
+        margin-bottom: 10px;
+        order: 2;
+        border-radius: 12px;
+    }
+    .assistant-bubble.expanded {
+        min-width: 100%;
+    }
+    .assistant-bubble::after {
+        display: none;
+    }
+    .assistant-icon {
+        order: 1;
+        align-self: flex-start;
+        margin-bottom: 5px;
+    }
 }
 </style>
